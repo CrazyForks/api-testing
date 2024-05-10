@@ -60,6 +60,7 @@ func (o *mockOption) runE(c *cobra.Command, args []string) (err error) {
 	reader := mock.NewLocalFileReader(o.files[0])
 	server := mock.NewInMemoryServer(o.port)
 
+	c.Println("start listen", o.port)
 	if err = server.Start(reader, o.prefix); err != nil {
 		return
 	}

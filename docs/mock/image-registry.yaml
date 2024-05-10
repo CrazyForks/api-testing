@@ -1,0 +1,108 @@
+items:
+- name: check
+  request:
+    method: HEAD
+    path: /v2/{repo}/{name}/manifests/{tag}
+  response:
+    header:
+      Content-Type: application/vnd.oci.image.index.v1+json
+      Docker-Distribution-Api-Version: registry/2.0
+- name: digest
+  request:
+    path: /v2/{repo}/{name}/manifests/sha256:99fb4a8b2c38fc9d1c7e83350fe2c5a426f20a0713ca6518fcb7a09cb4fc2d83
+  response:
+    header:
+      Content-Type: application/vnd.oci.image.manifest.v1+json
+      Docker-Content-Digest: "sha256:{{ sha256sum .Response.Body }}"
+      Docker-Distribution-Api-Version: registry/2.0
+    body: |
+      {
+        "schemaVersion": 2,
+        "mediaType": "application/vnd.oci.image.manifest.v1+json",
+        "config": {
+          "mediaType": "application/vnd.oci.image.config.v1+json",
+          "digest": "sha256:35b3c3c0eb64386fbd68776c86c385a1f14e3ac0ca994a4bd142b8d49471cc73",
+          "size": 6281
+        },
+        "layers": [
+          {
+            "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+            "digest": "sha256:35b3c3c0eb64386fbd68776c86c385a1f14e3ac0ca994a4bd142b8d49471cc73",
+            "size": 26886018
+          }
+        ]
+      }
+- name: manifests
+  request:
+    path: /v2/{repo}/{name}/manifests/{digest}
+    header:
+      Accept: application/vnd.oci.image.index.v1+json
+  response:
+    header:
+      Content-Type: application/vnd.oci.image.index.v1+json
+      Docker-Distribution-Api-Version: registry/2.0
+      Docker-Content-Digest: "sha256:{{ sha256sum .Response.Body }}"
+    body: |
+      {
+        "schemaVersion": 2,
+        "mediaType": "application/vnd.oci.image.index.v1+json",
+        "manifests": [
+          {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:99fb4a8b2c38fc9d1c7e83350fe2c5a426f20a0713ca6518fcb7a09cb4fc2d83",
+            "size": 2590,
+            "platform": {
+              "architecture": "amd64",
+              "os": "linux"
+            }
+          },
+          {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:c37f9f1a41da273b4721d7bc4e7a17d20b5114dc7aa367a3304cf8ffbb42a2a6",
+            "size": 2588,
+            "platform": {
+              "architecture": "arm64",
+              "os": "linux"
+            }
+          },
+          {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:e8f36b0a4b0cb753c5d7ef814138be36d7befa9080d2fcf51255f8734d05fb9b",
+            "size": 566,
+            "annotations": {
+              "vnd.docker.reference.digest": "sha256:99fb4a8b2c38fc9d1c7e83350fe2c5a426f20a0713ca6518fcb7a09cb4fc2d83",
+              "vnd.docker.reference.type": "attestation-manifest"
+            },
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          },
+          {
+            "mediaType": "application/vnd.oci.image.manifest.v1+json",
+            "digest": "sha256:7a8e12b7265356260453f8c10c44faf5931d940e7c943bff9b291567d6f9637a",
+            "size": 566,
+            "annotations": {
+              "vnd.docker.reference.digest": "sha256:c37f9f1a41da273b4721d7bc4e7a17d20b5114dc7aa367a3304cf8ffbb42a2a6",
+              "vnd.docker.reference.type": "attestation-manifest"
+            },
+            "platform": {
+              "architecture": "unknown",
+              "os": "unknown"
+            }
+          }
+        ]
+      }
+- name: layer
+  request:
+    path: /v2/{repo}/{name}/blobs/{digest}
+  response:
+    header:
+      Accept-Ranges: bytes
+      Cache-Control: max-age=31536000
+#      Content-Type: application/vnd.oci.image.layer.v1.tar+gzip
+      Content-Type: application/octet-stream
+      Docker-Content-Digest: sha256:35b3c3c0eb64386fbd68776c86c385a1f14e3ac0ca994a4bd142b8d49471cc73
+      Docker-Distribution-Api-Version: registry/2.0
+    body: H4sIAAAAAAAAA+3OMQrCQBCF4ZE0NnoDcTstd2F29xiewUKwiCzE2Nt7A6tcRQ/iDVKndYlgIaJVEOH/mjfMTPG2m7JMMiybBdU+s9e01ntxGlz0qhrz3tngghg7cK/eYV+vK2OkSqn+9Pft/qfmp/FjKNrLaJLz2nSr3TQ2z49jLM632UKWP+kHAAAAAAAAAAAAAAAAAHjvDnk1GgMAKAAA
+    encoder: base64

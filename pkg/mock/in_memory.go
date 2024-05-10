@@ -17,6 +17,7 @@ package mock
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -108,7 +109,9 @@ func (s *inMemoryServer) Start(reader Reader, prefix string) (err error) {
 		return
 	}
 
-	s.listener, err = net.Listen("tcp", fmt.Sprintf(":%d", s.port))
+	if s.listener, err = net.Listen("tcp", fmt.Sprintf(":%d", s.port)); err != nil {
+		return
+	}
 	go func() {
 		err = http.Serve(s.listener, handler)
 	}()
@@ -247,16 +250,41 @@ func (s *inMemoryServer) startObject(obj Object) {
 }
 
 func (s *inMemoryServer) startItem(item Item) {
+	method := util.EmptyThenDefault(item.Request.Method, http.MethodGet)
+	memLogger.Info("register mock service", "method", method, "path", item.Request.Path)
+
+	var headerSlices []string
+	for k, v := range item.Request.Header {
+		headerSlices = append(headerSlices, k, v)
+	}
+
 	s.mux.HandleFunc(item.Request.Path, func(w http.ResponseWriter, req *http.Request) {
+		memLogger.Info("receiving mock request", "name", item.Name, "method", req.Method, "path", req.URL.Path)
+
+		item.Param = mux.Vars(req)
 		item.Response.Header[headerMockServer] = fmt.Sprintf("api-testing: %s", version.GetVersion())
 		item.Response.Header["content-length"] = fmt.Sprintf("%d", len(item.Response.Body))
 		for k, v := range item.Response.Header {
-			w.Header().Set(k, v)
+			hv, hErr := render.Render("mock-server-header", v, &item)
+			if hErr != nil {
+				hv = v
+				memLogger.Error(hErr, "failed render mock-server-header", "value", v)
+			}
+
+			w.Header().Set(k, hv)
 		}
-		body, err := render.RenderAsBytes("start-item", item.Response.Body, req)
-		writeResponse(w, body, err)
 		w.WriteHeader(util.ZeroThenDefault(item.Response.StatusCode, http.StatusOK))
-	}).Methods(util.EmptyThenDefault(item.Request.Method, http.MethodGet))
+
+		var body []byte
+		var err error
+
+		if item.Response.Encoder == "base64" {
+			body, err = base64.StdEncoding.DecodeString(item.Response.Body)
+		} else {
+			body, err = render.RenderAsBytes("start-item", item.Response.Body, item)
+		}
+		writeResponse(w, body, err)
+	}).Methods(method).Headers(headerSlices...)
 }
 
 func writeResponse(w http.ResponseWriter, data []byte, err error) {
