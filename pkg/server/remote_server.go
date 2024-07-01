@@ -21,6 +21,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"io"
 	"net/http"
 	"os"
@@ -494,8 +496,29 @@ func (s *server) GetTestCase(ctx context.Context, in *TestCaseIdentity) (reply *
 	return
 }
 
+var ExecutionCountNum = promauto.NewCounter(prometheus.CounterOpts{
+	Name: "atest_execution_count",
+	Help: "The total number of request execution",
+})
+var ExecutionSuccessNum = promauto.NewCounter(prometheus.CounterOpts{
+	Name: "atest_execution_success",
+	Help: "The total number of request execution success",
+})
+var ExecutionFailNum = promauto.NewCounter(prometheus.CounterOpts{
+	Name: "atest_execution_fail",
+	Help: "The total number of request execution fail",
+})
+
 func (s *server) RunTestCase(ctx context.Context, in *TestCaseIdentity) (result *TestCaseResult, err error) {
 	var targetTestSuite testing.TestSuite
+	ExecutionCountNum.Inc()
+	defer func() {
+		if result.Error == "" {
+			ExecutionSuccessNum.Inc()
+		} else {
+            ExecutionFailNum.Inc()
+		}
+	}()
 
 	result = &TestCaseResult{}
 	loader := s.getLoader(ctx)
@@ -748,7 +771,7 @@ func (s *server) PopularHeaders(ctx context.Context, in *Empty) (pairs *Pairs, e
 		Data: []*Pair{},
 	}
 
-	err = yaml.Unmarshal([]byte(popularHeaders), &pairs.Data)
+	err = yaml.Unmarshal(popularHeaders, &pairs.Data)
 	return
 }
 
@@ -986,7 +1009,7 @@ func (s *server) getLoaderByStoreName(storeName string) (loader testing.Writer, 
 }
 
 //go:embed data/headers.yaml
-var popularHeaders string
+var popularHeaders []byte
 
 func findParentTestCases(testcase *testing.TestCase, suite *testing.TestSuite) (testcases []testing.TestCase) {
 	reg, matchErr := regexp.Compile(`(.*?\{\{.*\.\w*.*?\}\})`)
